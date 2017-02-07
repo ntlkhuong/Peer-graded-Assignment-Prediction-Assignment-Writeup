@@ -1,0 +1,93 @@
+---
+title: 'Assignment: Prediction Assignment Writeup'
+author: "khuongtln"
+date: "2/5/2017"
+output: html_document
+---
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. 
+These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+## Data loading
+
+```{r}
+training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",na.strings = c("NA", "#DIV/0!"))
+testing <-read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",na.strings = c("NA", "#DIV/0!"))
+dim(training)
+dim(testing)
+```
+## Some necessary libraries
+
+```{r message=FALSE}
+options(warn=-1)
+suppressWarnings(library(Hmisc))
+suppressWarnings(library(caret))
+suppressWarnings(library(randomForest))
+suppressWarnings(library(foreach))
+suppressWarnings(library(doParallel))
+suppressWarnings(library(parallel))
+```
+
+## Data explore
+```{r}
+dim(training)
+table(training$classe)
+```
+
+For trainning data, Need to clean some NA values and remove some variable not related to training$classe
+```{r}
+NA_count <- sapply(1:dim(training)[2],function(x)sum(is.na(training[,x])))
+NA_list <- which(NA_count > 0)
+colnames(training[,c(1:7)])
+```
+
+```{r}
+training = training[,-NA_list]
+training = training[,-c(1:7)]
+training$classe = factor(training$classe)
+```
+
+For test data, need to do the same way
+```{r}
+testing = testing[,NA_list]
+testing = testing[,-c(1:7)]
+```
+
+## Cross Validation
+```{r}
+set.seed(1024)
+cv3 = trainControl(method="cv",number=3,verboseIter = TRUE,allowParallel = TRUE)
+modrf=train(classe ~.,data = training,method ="rf", trControl=cv3)
+modtree = train(classe~.,data=training,method="rpart",trControl=cv3)
+```
+
+The performance of these two model on the testing data
+```{r}
+prf=predict(modrf,training)
+ptree=predict(modtree,training)
+table(prf,training$classe)
+
+table(ptree,training$classe)
+```
+
+For the testing data
+```{r}
+#prf=predict(modrf,testing)
+#ptree=predict(modtree,testing)
+#table(prf,ptree)
+```
+
+```{r}
+#answers=predict(modrf,testing)
+#pml_write_files = function(x){
+#  for(i in 1:n){
+#  n = length(x)
+#    filename = paste0("problem_id_",i,".txt")
+#    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+#  }
+#}
+#answers
+```
+
