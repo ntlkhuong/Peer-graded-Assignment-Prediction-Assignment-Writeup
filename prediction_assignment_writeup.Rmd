@@ -2,7 +2,9 @@
 title: 'Assignment: Prediction Assignment Writeup'
 author: "khuongtln"
 date: "2/5/2017"
-output: html_document
+output:
+  html_document:
+    keep_md: true
 ---
 
 ## Background
@@ -12,34 +14,36 @@ These type of devices are part of the quantified self movement – a group of en
 
 ## Data loading
 
+Loading the data for explore
 ```{r}
-training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",na.strings = c("NA", "#DIV/0!"))
-testing <-read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",na.strings = c("NA", "#DIV/0!"))
-dim(training)
-dim(testing)
+training <- read.csv("pml-training.csv",na.strings = c("NA", "#DIV/0!"))
+testing <-read.csv("pml-testing.csv",na.strings = c("NA", "#DIV/0!"))
 ```
 ## Some necessary libraries
 
 ```{r message=FALSE}
-options(warn=-1)
-suppressWarnings(library(Hmisc))
-suppressWarnings(library(caret))
-suppressWarnings(library(randomForest))
-suppressWarnings(library(foreach))
-suppressWarnings(library(doParallel))
-suppressWarnings(library(parallel))
+library(Hmisc)
+library(caret)
+library(randomForest)
+library(foreach)
+library(doParallel)
+library(parallel)
 ```
 
 ## Data explore
+
+Exam the loaded data
 ```{r}
 dim(training)
 table(training$classe)
+
+dim(testing)
 ```
 
 For trainning data, Need to clean some NA values and remove some variable not related to training$classe
 ```{r}
-NA_count <- sapply(1:dim(training)[2],function(x)sum(is.na(training[,x])))
-NA_list <- which(NA_count > 0)
+NA_count = sapply(1:dim(training)[2],function(x)sum(is.na(training[,x])))
+NA_list = which(NA_count>0)
 colnames(training[,c(1:7)])
 ```
 
@@ -49,13 +53,16 @@ training = training[,-c(1:7)]
 training$classe = factor(training$classe)
 ```
 
-For test data, need to do the same way
+The same for testing data, need to clean NA values
 ```{r}
-testing = testing[,NA_list]
+testing = testing[,-NA_list]
 testing = testing[,-c(1:7)]
+dim(testing)
 ```
 
 ## Cross Validation
+will try to use different classification methods in caret package, classification tree algorithm and random force. 3-fold validation using trainControl function also will be used.
+
 ```{r}
 set.seed(1024)
 cv3 = trainControl(method="cv",number=3,verboseIter = TRUE,allowParallel = TRUE)
@@ -68,26 +75,30 @@ The performance of these two model on the testing data
 prf=predict(modrf,training)
 ptree=predict(modtree,training)
 table(prf,training$classe)
-
 table(ptree,training$classe)
 ```
 
 For the testing data
 ```{r}
-#prf=predict(modrf,testing)
-#ptree=predict(modtree,testing)
-#table(prf,ptree)
+prf=predict(modrf,testing)
+ptree=predict(modtree,testing)
+table(prf,ptree)
 ```
 
+Comparing the result, it seems that random forest model has better accuracy for the testing dataset.
+
+## Conclusion
+Random forest model was chosen for the testing dataset.
 ```{r}
-#answers=predict(modrf,testing)
-#pml_write_files = function(x){
-#  for(i in 1:n){
-#  n = length(x)
-#    filename = paste0("problem_id_",i,".txt")
-#    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
-#  }
-#}
-#answers
+answers=predict(modrf,testing)
+pml_write_files = function(x){
+n = length(x)
+for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+answers
+pml_write_files(answers)
 ```
 

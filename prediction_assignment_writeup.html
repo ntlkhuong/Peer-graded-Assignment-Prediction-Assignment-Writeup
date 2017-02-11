@@ -129,34 +129,35 @@ $(document).ready(function () {
 </div>
 <div id="data-loading" class="section level2">
 <h2>Data loading</h2>
-<pre class="r"><code>training &lt;- read.csv(&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot;,na.strings = c(&quot;NA&quot;, &quot;#DIV/0!&quot;))
-testing &lt;-read.csv(&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&quot;,na.strings = c(&quot;NA&quot;, &quot;#DIV/0!&quot;))
-dim(training)</code></pre>
-<pre><code>## [1] 19622   160</code></pre>
-<pre class="r"><code>dim(testing)</code></pre>
-<pre><code>## [1]  20 160</code></pre>
+<p>Loading the data for explore</p>
+<pre class="r"><code>training &lt;- read.csv(&quot;pml-training.csv&quot;,na.strings = c(&quot;NA&quot;, &quot;#DIV/0!&quot;))
+testing &lt;-read.csv(&quot;pml-testing.csv&quot;,na.strings = c(&quot;NA&quot;, &quot;#DIV/0!&quot;))</code></pre>
 </div>
 <div id="some-necessary-libraries" class="section level2">
 <h2>Some necessary libraries</h2>
-<pre class="r"><code>options(warn=-1)
-suppressWarnings(library(Hmisc))
-suppressWarnings(library(caret))
-suppressWarnings(library(randomForest))
-suppressWarnings(library(foreach))
-suppressWarnings(library(doParallel))
-suppressWarnings(library(parallel))</code></pre>
+<pre class="r"><code>library(Hmisc)</code></pre>
+<pre><code>## Warning: package 'ggplot2' was built under R version 3.3.2</code></pre>
+<pre class="r"><code>library(caret)</code></pre>
+<pre><code>## Warning: package 'caret' was built under R version 3.3.2</code></pre>
+<pre class="r"><code>library(randomForest)
+library(foreach)
+library(doParallel)
+library(parallel)</code></pre>
 </div>
 <div id="data-explore" class="section level2">
 <h2>Data explore</h2>
+<p>Exam the loaded data</p>
 <pre class="r"><code>dim(training)</code></pre>
 <pre><code>## [1] 19622   160</code></pre>
 <pre class="r"><code>table(training$classe)</code></pre>
 <pre><code>## 
 ##    A    B    C    D    E 
 ## 5580 3797 3422 3216 3607</code></pre>
+<pre class="r"><code>dim(testing)</code></pre>
+<pre><code>## [1]  20 160</code></pre>
 <p>For trainning data, Need to clean some NA values and remove some variable not related to training$classe</p>
-<pre class="r"><code>NA_count &lt;- sapply(1:dim(training)[2],function(x)sum(is.na(training[,x])))
-NA_list &lt;- which(NA_count &gt; 0)
+<pre class="r"><code>NA_count = sapply(1:dim(training)[2],function(x)sum(is.na(training[,x])))
+NA_list = which(NA_count&gt;0)
 colnames(training[,c(1:7)])</code></pre>
 <pre><code>## [1] &quot;X&quot;                    &quot;user_name&quot;            &quot;raw_timestamp_part_1&quot;
 ## [4] &quot;raw_timestamp_part_2&quot; &quot;cvtd_timestamp&quot;       &quot;new_window&quot;          
@@ -164,12 +165,15 @@ colnames(training[,c(1:7)])</code></pre>
 <pre class="r"><code>training = training[,-NA_list]
 training = training[,-c(1:7)]
 training$classe = factor(training$classe)</code></pre>
-<p>For test data, need to do the same way</p>
-<pre class="r"><code>testing = testing[,NA_list]
-testing = testing[,-c(1:7)]</code></pre>
+<p>The same for testing data, need to clean NA values</p>
+<pre class="r"><code>testing = testing[,-NA_list]
+testing = testing[,-c(1:7)]
+dim(testing)</code></pre>
+<pre><code>## [1] 20 53</code></pre>
 </div>
 <div id="cross-validation" class="section level2">
 <h2>Cross Validation</h2>
+<p>will try to use different classification methods in caret package, classification tree algorithm and random force. 3-fold validation using trainControl function also will be used.</p>
 <pre class="r"><code>set.seed(1024)
 cv3 = trainControl(method=&quot;cv&quot;,number=3,verboseIter = TRUE,allowParallel = TRUE)
 modrf=train(classe ~.,data = training,method =&quot;rf&quot;, trControl=cv3)</code></pre>
@@ -225,18 +229,33 @@ table(prf,training$classe)</code></pre>
 ##     D    0    0    0    0    0
 ##     E   14    0    0    0 1631</code></pre>
 <p>For the testing data</p>
-<pre class="r"><code>#prf=predict(modrf,testing)
-#ptree=predict(modtree,testing)
-#table(prf,ptree)</code></pre>
-<pre class="r"><code>#answers=predict(modrf,testing)
-#pml_write_files = function(x){
-#  for(i in 1:n){
-#  n = length(x)
-#    filename = paste0(&quot;problem_id_&quot;,i,&quot;.txt&quot;)
-#    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
-#  }
-#}
-#answers</code></pre>
+<pre class="r"><code>prf=predict(modrf,testing)
+ptree=predict(modtree,testing)
+table(prf,ptree)</code></pre>
+<pre><code>##    ptree
+## prf A B C D E
+##   A 7 0 0 0 0
+##   B 3 0 5 0 0
+##   C 0 0 1 0 0
+##   D 0 0 1 0 0
+##   E 1 0 2 0 0</code></pre>
+<p>Comparing the result, it seems that random forest model has better accuracy for the testing dataset.</p>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>Random forest model was chosen for the testing dataset.</p>
+<pre class="r"><code>answers=predict(modrf,testing)
+pml_write_files = function(x){
+n = length(x)
+for(i in 1:n){
+    filename = paste0(&quot;problem_id_&quot;,i,&quot;.txt&quot;)
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+answers</code></pre>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+<pre class="r"><code>pml_write_files(answers)</code></pre>
 </div>
 
 
